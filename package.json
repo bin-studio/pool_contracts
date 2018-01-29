@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/okwme/patreth_contracts/issues"
   },
-  "homepage": "https://github.com/okwme/patreth_contracts#readme"
+  "homepage": "https://github.com/okwme/patreth_contracts#readme",
+  "dependencies": {
+    "web3-utils": "^1.0.0-beta.29"
+  }
 }

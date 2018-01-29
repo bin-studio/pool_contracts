@@ -7,7 +7,6 @@ import 'zeppelin/contracts/token/StandardToken.sol';
 import 'oraclize/contracts/usingOraclize.sol';
 
 contract Patron is StandardToken, usingOraclize {
-
   string public name ;
   string public symbol;
   uint8 public constant decimals = 18;
@@ -25,7 +24,7 @@ contract Patron is StandardToken, usingOraclize {
   address[] subscriptionKeys;
   struct Subscription {
     bool exists;
-    bool running;
+    bool active;
     bytes32 lastQueryId;
     uint256 amount;
     uint256 total;
@@ -35,6 +34,7 @@ contract Patron is StandardToken, usingOraclize {
   }
   mapping (bytes32 => address) oraclizeIds;
 
+  event LogUint(uint number);
   event Paid(address patron, uint256 amount);
   event AlertEmptyPledge(address patron);
   event AlertEmptyOracle(address patron);
@@ -47,6 +47,7 @@ contract Patron is StandardToken, usingOraclize {
 
     graphType = _graphType;
     graphMultiplyer =_graphMultiplyer;
+    OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
   }
 
 
@@ -56,9 +57,10 @@ contract Patron is StandardToken, usingOraclize {
 
   // subscribe
   function subscribe (address patron, uint256 amount, uint256 interval) public payable {
-
     if (amount == 0) revert();
-
+    if (msg.value == 0) revert();
+    if (patron != msg.sender) revert();
+    if (interval > 4 weeks) revert();
     if (subscriptions[patron].exists) {
       recurring(patron);
     } else {
@@ -69,33 +71,36 @@ contract Patron is StandardToken, usingOraclize {
       subscriptions[patron].interval = interval;
       subscriptions[patron].start = now;
       subscriptions[patron].last = now;
-      subscriptions[patron].running = true;
+      subscriptions[patron].active = true;
       Paid(patron, amount);
       oracle(patron);
     }
   }
 
-  function oracle (address patron) internal {
-    if (oraclize_getPrice("URL") > this.balance) {
-      subscriptions[patron].running = false;
-      AlertEmptyOracle(patron);
-    }
-    uint256 interval = subscriptions[patron].interval;
-    bytes32 queryId = oraclize_query(interval, "URL", "");
-    oraclizeIds[queryId]  = patron;
+  // function editSubscription (address patron)
+
+  function oracle (address patron) private {
+    LogUint(oraclize_getPrice("URL"));
+    // if (oraclize_getPrice("URL") > this.balance) {
+    //   subscriptions[patron].active = false;
+    //   AlertEmptyOracle(patron);
+    // }
+    // uint256 interval = subscriptions[patron].interval;
+    // bytes32 queryId = oraclize_query(interval, "URL", "");
+    // oraclizeIds[queryId]  = patron;
   }
 
-  function recurring (address patron) internal {
+  function recurring (address patron) private {
     uint256 amount = subscriptions[patron].amount;
 
     if (baseToken.allowance(patron, address(this)) < amount) {
-      subscriptions[patron].running = false;
+      subscriptions[patron].active = false;
       AlertEmptyPledge(patron);
     } else {
       if (!baseToken.transferFrom(patron, address(this), amount)) revert();
       subscriptions[patron].total += amount;
       subscriptions[patron].last = now;
-      subscriptions[patron].running = true;
+      subscriptions[patron].active = true;
       Paid(patron, amount);
       oracle(patron);
     }
@@ -103,6 +108,7 @@ contract Patron is StandardToken, usingOraclize {
 
   function __callback(bytes32 queryId) {
     if (msg.sender != oraclize_cbAddress()) revert();
+    // if (msg.sender != oraclize_cbAddress()){}
     address patron = oraclizeIds[queryId];
     recurring(patron);
   }
