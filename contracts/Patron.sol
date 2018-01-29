@@ -4,9 +4,10 @@ pragma solidity ^0.4.17;
  */
 
 import 'zeppelin/contracts/token/StandardToken.sol';
+import 'zeppelin/contracts/ownership/Ownable.sol';
 import 'oraclize/contracts/usingOraclize.sol';
 
-contract Patron is StandardToken, usingOraclize {
+contract Patron is StandardToken, usingOraclize, Ownable {
   string public name ;
   string public symbol;
   uint8 public constant decimals = 18;
@@ -39,7 +40,7 @@ contract Patron is StandardToken, usingOraclize {
   event AlertEmptyPledge(address patron);
   event AlertEmptyOracle(address patron);
 
-  function Patron (string _name, string _symbol, address _baseToken, uint256 _graphType, uint256 _graphMultiplyer) {
+  function Patron (string _name, string _symbol, address _baseToken, uint256 _graphType, uint256 _graphMultiplyer) payable {
     name = _name;
     symbol = _symbol;
 
@@ -81,13 +82,23 @@ contract Patron is StandardToken, usingOraclize {
 
   function oracle (address patron) private {
     LogUint(oraclize_getPrice("URL"));
-    // if (oraclize_getPrice("URL") > this.balance) {
-    //   subscriptions[patron].active = false;
-    //   AlertEmptyOracle(patron);
-    // }
-    // uint256 interval = subscriptions[patron].interval;
-    // bytes32 queryId = oraclize_query(interval, "URL", "");
-    // oraclizeIds[queryId]  = patron;
+    if (oraclize_getPrice("URL") > this.balance) {
+      subscriptions[patron].active = false;
+      AlertEmptyOracle(patron);
+    } else {
+      uint256 interval = subscriptions[patron].interval;
+      bytes32 queryId = oraclize_query(interval, "URL", "", oraclizeGasLimit);
+      oraclizeIds[queryId] = patron;
+
+    }
+  }
+
+  function updateOracleGasPrice (uint newPrice) onlyOwner {
+    oraclizeGasPrice = newPrice;
+    oraclize_setCustomGasPrice(oraclizeGasPrice);
+  }
+  function updateOracleGasLimit (uint newPrice) onlyOwner {
+    oraclizeGasLimit = newPrice;
   }
 
   function recurring (address patron) private {
@@ -106,9 +117,8 @@ contract Patron is StandardToken, usingOraclize {
     }
   }
 
-  function __callback(bytes32 queryId) {
+  function __callback(bytes32 queryId) public {
     if (msg.sender != oraclize_cbAddress()) revert();
-    // if (msg.sender != oraclize_cbAddress()){}
     address patron = oraclizeIds[queryId];
     recurring(patron);
   }

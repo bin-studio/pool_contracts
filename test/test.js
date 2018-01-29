@@ -6,8 +6,9 @@ contract('Patron', function(accounts) {
   let simpleToken, patron;
 
   beforeEach(async function() { 
+    const starter = utils.toWei(utils.toBN(1))
     simpleToken = await SimpleToken.new();
-    patron = await Patron.new('Test Project', 'ASDF', simpleToken.address, 0, 2);
+    patron = await Patron.new('Test Project', 'ASDF', simpleToken.address, 0, 2, {value: starter});
   });
 
   describe("Deploying token", function() {
@@ -29,11 +30,9 @@ contract('Patron', function(accounts) {
         const intervals = utils.toBN(10)
         const approve = amount.mul(intervals)
         const tokenTx = await simpleToken.approve(patron.address, approve.toString());
-        // console.log(tokenTx)
         const interval = utils.toBN(5 * 60) // 5 minutes
-        // console.log(accounts[0], amount, interval)
         const tx = await patron.subscribe(accounts[0], amount.toString(), interval.toString(), {from: accounts[0], value: 1000000000});
-        console.log(tx)
+        assert.equal(tx.receipt.status, '0x01');
     });
 
     // it("and reverting 10 tokens should result in net 0 (w 1 contributor)", async function () {
