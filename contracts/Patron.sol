@@ -53,8 +53,20 @@ contract Patron is StandardToken, usingOraclize, Ownable {
 
 
   // buy
+  function mint (address patron, uint256 amount) returns(bool success){
+    if (msg.sender != patron && msg.sender != oraclize_cbAddress()) revert();
+    if (!baseToken.transferFrom(patron, address(this), amount)) revert();
+    balances[patron] = balances[patron].add(amount);
+    return true;
+  }
 
   // sell
+  function unmint (address patron, uint256 amount) returns(bool success){
+    if (msg.sender != patron && msg.sender != oraclize_cbAddress()) revert();
+    if (!baseToken.transfer(patron, amount)) revert();
+    balances[patron] = balances[patron].sub(amount);
+    return true;
+  }
 
   // subscribe
   function subscribe (address patron, uint256 amount, uint256 interval) public payable {
@@ -65,7 +77,7 @@ contract Patron is StandardToken, usingOraclize, Ownable {
     if (subscriptions[patron].exists) {
       recurring(patron);
     } else {
-      if (!baseToken.transferFrom(patron, address(this), amount)) revert();
+      if (!mint(patron, amount)) revert();
       subscriptions[patron].exists = true;
       subscriptions[patron].amount = amount;
       subscriptions[patron].total = amount;
@@ -78,7 +90,16 @@ contract Patron is StandardToken, usingOraclize, Ownable {
     }
   }
 
-  // function editSubscription (address patron)
+  function editSubscription (address patron, uint256 amount, uint256 interval) public payable {
+    if (!subscriptions[patron].exists) revert();
+    if (amount == 0) {
+      subscriptions[patron].amount = 0;
+      subscriptions[patron].active = false;
+    } else {
+      subscriptions[patron].amount = amount;
+      subscriptions[patron].interval = interval;
+    }
+  }
 
   function oracle (address patron) private {
     LogUint(oraclize_getPrice("URL"));
@@ -103,12 +124,12 @@ contract Patron is StandardToken, usingOraclize, Ownable {
 
   function recurring (address patron) private {
     uint256 amount = subscriptions[patron].amount;
-
+    if (amount == 0) revert();
     if (baseToken.allowance(patron, address(this)) < amount) {
       subscriptions[patron].active = false;
       AlertEmptyPledge(patron);
     } else {
-      if (!baseToken.transferFrom(patron, address(this), amount)) revert();
+      if (!mint(patron, amount)) revert();
       subscriptions[patron].total += amount;
       subscriptions[patron].last = now;
       subscriptions[patron].active = true;
