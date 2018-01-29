@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "oraclize": "cd oraclize; node bridge -H localhost:7545 -a 1 --dev",
+    "test": "truffle test test/test.js"
   },
   "repository": {
     "type": "git",
