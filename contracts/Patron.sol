@@ -104,8 +104,11 @@ pragma solidity ^0.4.17;
   }
 
   function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 totalMinted, uint256 totalCost) {
-    totalMinted = costPerToken.div(amount);
-    totalCost = totalMinted.mul(costPerToken);
+    uint256 tmpTotalMinted = costPerToken.div(amount);
+    uint256 tmpCostPerToken = currentCostOfToken(totalSupply.add(tmpTotalMinted));
+    totalMinted = amount.div(tmpCostPerToken);
+    totalCost = totalMinted.mul(tmpCostPerToken);
+
     return (totalMinted, totalCost);
   }
 
