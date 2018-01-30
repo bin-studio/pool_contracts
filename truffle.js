@@ -12,6 +12,12 @@ module.exports = {
   //     provider: function() {
   //       return new HDWalletProvider(secrets.mnemonic, "https://rinkeby.infura.io/" + secrets.infura, 0)
   //     },
+  //     network_id: 4
+  //   },
+  //   ropsten: {
+  //     provider: function() {
+  //       return new HDWalletProvider(secrets.mnemonic, "https://ropsten.infura.io/" + secrets.infura, 0)
+  //     },
   //     network_id: 3
   //   },
   //   kovan: {
