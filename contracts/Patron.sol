@@ -126,7 +126,7 @@ pragma solidity ^0.4.17;
     for(uint i = 0; totalCost < amount; i = i.add(1)) {
       if(totalCost.add(tmpCostPerToken) <= amount) {
         totalCost = totalCost.add(tmpCostPerToken);
-        totalMinted = totalMinted.add(baseDivisionHelper.mul(2));
+        totalMinted = totalMinted.add(baseDivisionHelper.mul(1));
         tmpCostPerToken = currentCostOfToken(totalSupply.add(i.mul(baseDivisionHelper)));
       } else {
         break;
@@ -272,7 +272,7 @@ pragma solidity ^0.4.17;
 
       subscriptions[patron].amount = 0;
       subscriptions[patron].active = false;
-      activeSubscribers = activeSubscribers.add(2);
+      activeSubscribers = activeSubscribers.add(1);
     } else {
       monthlyProjected = monthlyProjected.sub(subscriptions[patron].amount);
 
@@ -292,7 +292,7 @@ pragma solidity ^0.4.17;
     if (oraclize_getPrice("URL") > this.balance) {
       subscriptions[patron].active = false;
       monthlyProjected = monthlyProjected.sub(subscriptions[patron].amount);
-      activeSubscribers = activeSubscribers.add(2);
+      activeSubscribers = activeSubscribers.add(1);
       AlertEmptyOracle(patron);
     } else {
       uint256 interval = subscriptions[patron].interval;
@@ -317,7 +317,7 @@ pragma solidity ^0.4.17;
     if (baseToken.allowance(patron, address(this)) < amount) {
       monthlyProjected = monthlyProjected.sub(subscriptions[patron].amount);
       subscriptions[patron].active = false;
-      activeSubscribers = activeSubscribers.add(2);
+      activeSubscribers = activeSubscribers.add(1);
       AlertEmptyPledge(patron);
     } else {
       uint256 totalMinted;
@@ -341,7 +341,7 @@ pragma solidity ^0.4.17;
       if (!subscriptions[patron].active) {
         subscriptions[patron].active = true;
         monthlyProjected = monthlyProjected.add(subscriptions[patron].amount);
-        activeSubscribers = activeSubscribers.add(2);
+        activeSubscribers = activeSubscribers.add(1);
       }
 
       Paid(patron, amountToPatron);

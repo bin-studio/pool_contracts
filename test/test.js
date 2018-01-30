@@ -28,42 +28,69 @@ contract('Patron', function(accounts) {
 
   describe("Constant function", function () {
     it("exponential calculation should work", async function () {
-      patron = await Patron.new('Test Project', 'ASDF', simpleToken.address, 18, 1, 10, {value: starter});
-      const expoResult = await patron.currentCostOfToken( web3.toBigNumber(1000) );
-      assert.equal(expoResult.toString(10), web3.toBigNumber(1000).toString(10));
+      const decimals = 18
+      const graphType = 1 // Exponential
+      const multiplyer = 1000 // fraction out of 10,000
+      const denominator = 10000 // fraction out of 10,000
+      const base = 0 // 10**14 // fraction out of 10,000
+      const minting = web3.toWei( web3.toBigNumber(10) ) // if there are 10.0 tokens * 10**18
+      patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
+      const expoResult = await patron.currentCostOfToken( minting );
+      // mx^2 + b
+      const jsResult = web3.toBigNumber(multiplyer).div(denominator).mul( minting.pow(2) ).add(base)
+      assert.equal(expoResult.toString(10), jsResult.toString(10));
+
+      const minting2 = web3.toWei( web3.toBigNumber(60) ) // if there are 60.0 tokens * 10**18
+      const expoResult2 = await patron.currentCostOfToken( minting2 );
+      // mx^2 + b
+      const jsResult2 = web3.toBigNumber(multiplyer).div(denominator).mul( minting2.pow(2) ).add(base)
+      assert.equal(expoResult2.toString(10), jsResult2.toString(10));
+
     })
   })
 
 
   describe("Minting new tokens", function () {
     it("with linear should work", async function () {
-      patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, 18, 0, 10, {value: starter});
+      const decimals = 18
+      const graphType = 0 // Linear
+      const multiplyer = 5000 // fraction out of 10000
+      patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
       await shouldWork()
     })
 
-    it("with exponential doesn't work", async function () {
-      try {
-        patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, 18, 1, 10, {value: starter});
-        await shouldWork()
-      } catch (error) {
-        assert.isOk('i expected this');
-      }
-    })
+    // it("with exponential doesn't work", async function () {
+    //   try {
+    //     const decimals = 18
+    //     const graphType = 1 // Exponential
+    //     const multiplyer = 10000 // fraction out of 10000
+    //     patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
+    //     await shouldWork()
+    //   } catch (error) {
+    //     assert.isOk('i expected this');
+    //   }
+    // })
 
-    it("with logarithmic doesn't work", async function () {
-      try {
-        patron = await Patron.new('Logarithmic Project', 'ASDF', simpleToken.address, 18, 2, 10, {value: starter});
-        await shouldWork()
-      } catch (error) {
-        assert.isOk('i expected this');
-      }
-    })
+    // it("with logarithmic doesn't work", async function () {
+    //   try {
+    //     const decimals = 18
+    //     const graphType = 2 // Logarithmic
+    //     const multiplyer = 10000 // fraction out of 10000
+    //     patron = await Patron.new('Logarithmic Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
+    //     await shouldWork()
+    //   } catch (error) {
+    //     assert.isOk('i expected this');
+    //   }
+    // })
   })
 
 
   describe("Subscribing", function() {
     it("should work", async function () {
-        patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, 18, 0, 10, {value: starter});
+        const decimals = 18
+        const graphType = 0 // Linear
+        const multiplyer = 20000 // fraction out of 10000
+        patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
 
         let extraGas = await patron.getOraclePrice()
         extraGas = extraGas.toString(10) === '0' ? extraGas.add(1) : extraGas
@@ -100,14 +127,14 @@ contract('Patron', function(accounts) {
     const approve = web3.toBigNumber(web3.toWei('1'))
     const approveTX = await simpleToken.approve(patron.address, approve)
     const gasEstimate = await patron.mint.estimateGas(accounts[0], approve)
-    // console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
+    console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
 
     const tuple = await patron.calculateMintTokenPerToken(approve)
     const totalMinted = tuple[0]
     const totalCost = tuple[1]
 
-    // console.log('totalMinted:', web3.fromWei(totalMinted.toString(10)))
-    // console.log('totalCost:', web3.fromWei(totalCost.toString(10)))
+    console.log('totalMinted:', web3.fromWei(totalMinted.toString(10)))
+    console.log('totalCost:', web3.fromWei(totalCost.toString(10)))
 
     const mintTX = await patron.mint(accounts[0], approve.toString(10))
     const balance = await patron.balanceOf(accounts[0])
@@ -115,10 +142,13 @@ contract('Patron', function(accounts) {
 
     const totalSupply = await patron.totalSupply()
     const costPerToken = await patron.costPerToken()
-    // console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
-    // console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
+    console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
+    console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
 
+    // total cost estimate is same as differece between base token balance
     assert.equal(totalCost.toString(10), preBalance.minus(postBalance).toString(10));
+
+    // total minted estimate is same as balance after minting
     assert.equal(web3.fromWei(totalMinted.toString(10)).toString(10), web3.fromWei(balance.toString(10)).toString(10));
   }
 
