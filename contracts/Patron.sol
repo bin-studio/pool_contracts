@@ -18,8 +18,8 @@ pragma solidity ^0.4.17;
 
   uint256 public oraclizeGasLimit = 200000;
   uint256 public oraclizeGasPrice = 4000000000;
-  mapping (address => Subscription) subscriptions;
 
+  mapping (address => Subscription) subscriptions;
   uint256 activeSubscribers;
   uint256 monthlyProjected;
 
@@ -28,7 +28,7 @@ pragma solidity ^0.4.17;
   struct Subscription {
     bool exists;
     bool active;
-    bytes32 lastQueryId;
+
     uint256 amount;
     uint256 percentToPatron; //  max 100
 
@@ -81,8 +81,22 @@ pragma solidity ^0.4.17;
     OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
   }
 
-  function mint(address patron, uint256 amount) public returns (bool) {
-    if (msg.sender != patron && msg.sender != oraclize_cbAddress()) revert();
+
+  function returnSubscriptionsLength() public constant returns(uint256 length) {
+    return subscriptionKeys.length;
+  }
+  function returnPatronByKey(uint256 subscriptionKey) public constant returns(bool active, uint256 amount, uint256 percentToPatron, uint256 toPatronTotal, uint256 toOwnerTotal, uint256 start, uint256 last) {
+    address patron = subscriptionKeys[subscriptionKey];
+    return returnPatronByAddress(patron);
+  }
+  function returnPatronByAddress(address patron) public constant returns(bool active, uint256 amount, uint256 percentToPatron, uint256 toPatronTotal, uint256 toOwnerTotal, uint256 start, uint256 last) {
+    Subscription s = subscriptions[patron];
+    return (s.active, s.amount, s.percentToPatron, s.toPatronTotal, s.toOwnerTotal, s.start, s.last);
+  }
+
+
+  function mint(address patron, uint256 amount) public returns (uint256, uint256) {
+    if (msg.sender != patron && msg.sender != oraclize_cbAddress() && patron != owner) revert();
     if (amount == 0) revert();
 
     uint256 totalMinted;
@@ -90,7 +104,6 @@ pragma solidity ^0.4.17;
 
     (totalMinted, totalCost) = calculateMintTokenPerToken(amount);
     if (totalCost == 0) revert();
-    if (!baseToken.transferFrom(patron, address(this), totalCost)) revert();
 
     totalEverMinted = totalEverMinted.add(totalMinted);
     totalSupply = totalSupply.add(totalMinted);
@@ -99,8 +112,10 @@ pragma solidity ^0.4.17;
 
     updateCostOfToken();
 
+    if (!baseToken.transferFrom(patron, address(this), totalCost)) revert();
+
     LogMint(totalMinted, totalCost);
-    return true;
+    return (totalMinted, totalCost);
   }
 
   function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 totalMinted, uint256 totalCost) {
@@ -121,8 +136,8 @@ pragma solidity ^0.4.17;
   }
 
   // sell
-  function unmint (address patron, uint256 amount) public returns(bool){
-    if (msg.sender != patron && msg.sender != oraclize_cbAddress()) revert();
+  function unmint (address patron, uint256 amount) public returns(uint256, uint256){
+    if (msg.sender != patron && msg.sender != oraclize_cbAddress() && patron != owner) revert();
     if (amount == 0) revert();
     if (amount > balances[patron]) revert();
 
@@ -131,7 +146,6 @@ pragma solidity ^0.4.17;
 
     (totalUnminted, totalCost) = calculateUnmintTokenPerToken(amount);
 
-    if (!baseToken.transferFrom(address(this), patron, totalCost)) revert();
 
     totalEverMinted = totalEverMinted.sub(totalUnminted);
     totalSupply = totalSupply.sub(totalUnminted);
@@ -139,9 +153,9 @@ pragma solidity ^0.4.17;
     poolBalance = poolBalance.sub(totalCost);
     
     updateCostOfToken();
-
+    if (!baseToken.transferFrom(address(this), patron, totalCost)) revert();
     LogUnmint(totalUnminted, totalCost);
-    return true;
+    return (totalUnminted, totalCost);
   }
 
   function calculateUnmintTokenPerToken (uint256 amount) public constant returns (uint256 totalUnminted, uint256 totalCost) {
@@ -167,7 +181,6 @@ pragma solidity ^0.4.17;
     uint cost = 0;
 
     if ( graphType == GraphType.GraphLinear ) {
-      LogUint(1);
       // mx + b
       cost = ( graphMultiplyer.mul(_supply).div(graphMultiplyerDivisor) ).add(baseCost);
     }
@@ -264,8 +277,11 @@ pragma solidity ^0.4.17;
     }
   }
 
+  function getOraclePrice () public constant returns(uint256) {
+    return oraclize_getPrice("URL").mul(oraclizeGasPrice);
+  }
+
   function oracle (address patron) private {
-    // LogUint(oraclize_getPrice("URL"));
     if (oraclize_getPrice("URL") > this.balance) {
       subscriptions[patron].active = false;
       monthlyProjected = monthlyProjected.sub(subscriptions[patron].amount);
@@ -297,24 +313,23 @@ pragma solidity ^0.4.17;
       activeSubscribers = activeSubscribers.add(2);
       AlertEmptyPledge(patron);
     } else {
+      uint256 totalMinted;
+      uint256 totalCost;
 
-      uint256 amountMultiplied = amount.mul(subscriptionPercentMultiplyer);
+      (totalMinted, totalCost) = mint(patron, amount);
+
+      uint256 amountMultiplied = totalMinted.mul(subscriptionPercentMultiplyer);
       uint256 percentToPatronMultiplied = subscriptions[patron].percentToPatron.mul(subscriptionPercentMultiplyer);
 
       uint256 amountToPatron = amountMultiplied.div(percentToPatronMultiplied);
-      uint256 amountToOwner = amount.sub(amountToPatron);
-
-      if (amountToPatron > 0) {
-        if (!mint(patron, amountToPatron)) revert();
-      }
-      if (amountToOwner > 0) {
-        if (!mint(owner, amountToOwner)) revert();
-      }
+      uint256 amountToOwner = totalMinted.sub(amountToPatron);
 
       subscriptions[patron].toPatronTotal = subscriptions[patron].toPatronTotal.add(amountToPatron);
       subscriptions[patron].toOwnerTotal = subscriptions[patron].toOwnerTotal.add(amountToOwner);
-
       subscriptions[patron].last = now;
+
+      balances[patron] = balances[patron].sub(amountToOwner);
+      balances[owner] = balances[owner].add(amountToOwner);
 
       if (!subscriptions[patron].active) {
         subscriptions[patron].active = true;
@@ -322,7 +337,8 @@ pragma solidity ^0.4.17;
         activeSubscribers = activeSubscribers.add(2);
       }
 
-      Paid(patron, amount);
+      Paid(patron, amountToPatron);
+      Paid(owner, amountToOwner);
       oracle(patron);
     }
   }
