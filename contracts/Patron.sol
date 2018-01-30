@@ -136,40 +136,47 @@ pragma solidity ^0.4.17;
   }
 
   // sell
-  function unmint (address patron, uint256 amount) public returns(uint256, uint256){
+  function unmint (address patron, uint256 amount) public returns(uint256 totalCost){
     if (msg.sender != patron && msg.sender != oraclize_cbAddress() && patron != owner) revert();
     if (amount == 0) revert();
     if (amount > balances[patron]) revert();
 
-    uint256 totalUnminted;
-    uint256 totalCost;
 
-    (totalUnminted, totalCost) = calculateUnmintTokenPerToken(amount);
+    totalCost = calculateUnmintTokenPerToken(amount);
 
 
-    totalEverMinted = totalEverMinted.sub(totalUnminted);
-    totalSupply = totalSupply.sub(totalUnminted);
-    balances[patron] = balances[patron].sub(totalUnminted);
+    totalEverMinted = totalEverMinted.sub(amount);
+    totalSupply = totalSupply.sub(amount);
+    balances[patron] = balances[patron].sub(amount);
     poolBalance = poolBalance.sub(totalCost);
     
     updateCostOfToken();
     if (!baseToken.transferFrom(address(this), patron, totalCost)) revert();
-    LogUnmint(totalUnminted, totalCost);
-    return (totalUnminted, totalCost);
+    LogUnmint(amount, totalCost);
+    return totalCost;
   }
 
-  function calculateUnmintTokenPerToken (uint256 amount) public constant returns (uint256 totalUnminted, uint256 totalCost) {
-    // uint256 totalUnminted = 0;
-    // uint256 totalCost = 0;
-    //for loop to determine cost at each point.
-    uint256 tmpCostPerToken = costPerToken.mul(baseDivisionHelper);
-    for(uint i = 0; totalUnminted <= amount; i = i.add(1)) {
-      totalCost = totalCost.add(tmpCostPerToken);
-      totalUnminted = totalUnminted.add(baseDivisionHelper.mul(1));
-      tmpCostPerToken = currentCostOfToken(totalSupply.sub(i.mul(baseDivisionHelper)));
-    }
-    return (totalUnminted, totalCost);
+  // function calculateUnmintTokenPerToken (uint256 amount) public constant returns (uint256 totalUnminted, uint256 totalCost) {
+  //   // uint256 totalUnminted = 0;
+  //   // uint256 totalCost = 0;
+  //   //for loop to determine cost at each point.
+  //   uint256 tmpCostPerToken = costPerToken.mul(baseDivisionHelper);
+  //   for(uint i = 0; totalUnminted <= amount; i = i.add(1)) {
+  //     totalCost = totalCost.add(tmpCostPerToken);
+  //     totalUnminted = totalUnminted.add(baseDivisionHelper.mul(1));
+  //     tmpCostPerToken = currentCostOfToken(totalSupply.sub(i.mul(baseDivisionHelper)));
+  //   }
+  //   return (totalUnminted, totalCost);
+  // }
+
+  function calculateUnmintTokenPerToken (uint256 totalUnminted) public constant returns (uint256 totalCost) {
+    uint256 beginCostPerToken = costPerToken;
+    uint256 endCostPerToken = costPerToken.add(totalUnminted);
+    uint256 averageCostPerToken = beginCostPerToken.add(endCostPerToken).div(2);
+    totalCost = averageCostPerToken.mul(totalUnminted);
+    return totalCost;
   }
+
 
   function updateCostOfToken() internal {
     costPerToken = currentCostOfToken(totalSupply);
