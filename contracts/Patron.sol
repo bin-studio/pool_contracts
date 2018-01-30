@@ -162,7 +162,8 @@ pragma solidity ^0.4.17;
     LogCostOfTokenUpdate(costPerToken);
   }
 
-  function currentCostOfToken(uint256 _supply) internal constant returns (uint _cost) {
+  function currentCostOfToken(uint256 _supply) public constant returns (uint _cost) {
+  // function currentCostOfToken(uint256 _supply) internal constant returns (uint _cost) {
     uint cost = 0;
 
     if ( graphType == GraphType.GraphLinear ) {
