@@ -56,10 +56,26 @@ contract('Patron', function(accounts) {
       const graphType = 0 // Linear
       const multiplyer = 1000 // fraction out of 10000
       patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
-      const results = await patron.calculateMintTokenPerToken(web3.toWei(web3.toBigNumber(55)).toString(10))
-      console.log(results)
-      // await shouldWork()
-      // await shouldWork()
+      
+      let results = await patron.calculateMintTokenPerToken((web3.toBigNumber(55)).toString(10))
+      // console.log(results)
+      let amount = results[0]
+      let newTokens = results[1]
+      console.log((amount).toString(), (newTokens).toString())
+      await shouldWork((web3.toBigNumber(55)).toString(10))
+
+      results = await patron.calculateMintTokenPerToken((web3.toBigNumber(55)).toString(10))
+      amount = results[0]
+      newTokens = results[1]
+      console.log((amount).toString(), (newTokens).toString())
+      await shouldWork((web3.toBigNumber(55)).toString(10))
+
+      results = await patron.calculateUnmintTokenPerToken((web3.toBigNumber(4)).toString(10))
+      // console.log(results)
+      // amount = results[0]
+      console.log(web3.fromWei(results).toString())
+
+      await unmint((web3.toBigNumber(4)).toString(10))
     })
 
     // it("with exponential doesn't work", async function () {
@@ -124,13 +140,15 @@ contract('Patron', function(accounts) {
   //   });
   // });
 
-  async function shouldWork() {
+  async function shouldWork(amount) {
     const preBalance = await simpleToken.balanceOf(accounts[0])
 
-    const approve = web3.toBigNumber(web3.toWei('1'))
+    const approve = web3.toBigNumber(web3.toWei(amount))
+    const simpleBalance = await simpleToken.balanceOf(accounts[0])
+    console.log('simpleBalanceBefore:', web3.fromWei(simpleBalance).toString())
     const approveTX = await simpleToken.approve(patron.address, approve)
 
-    const tuple = await patron.calculateMintTokenPerToken(approve)
+    const tuple = await patron.calculateMintTokenPerToken(web3.fromWei(approve).toString())
     const totalMinted = tuple[0]
     const totalCost = tuple[1]
 
@@ -138,10 +156,10 @@ contract('Patron', function(accounts) {
     console.log('totalCost:', web3.fromWei(totalCost.toString(10)))
     const preBalanceBondedToken = await patron.balanceOf(accounts[0])
 
-    const gasEstimate = await patron.mint.estimateGas(accounts[0], approve)
+    const gasEstimate = await patron.mint.estimateGas(accounts[0], web3.fromWei(approve).toString() )
     console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
 
-    const mintTX = await patron.mint(accounts[0], approve.toString(10))
+    const mintTX = await patron.mint(accounts[0], web3.fromWei(approve).toString(10))
     const balance = await patron.balanceOf(accounts[0])
     const postBalance = await simpleToken.balanceOf(accounts[0])
 
@@ -156,6 +174,41 @@ contract('Patron', function(accounts) {
     // total minted estimate is same as balance after minting
     assert.equal(web3.fromWei(totalMinted.add(preBalanceBondedToken).toString(10)).toString(10), web3.fromWei(balance.toString(10)).toString(10));
   }
+
+
+  async function unmint(amount) {
+    const preBalance = await simpleToken.balanceOf(accounts[0])
+
+    const approve = web3.toBigNumber(web3.toWei(amount))
+    const simpleBalance = await simpleToken.balanceOf(accounts[0])
+    console.log('simpleBalanceBefore:', web3.fromWei(simpleBalance).toString())
+    const approveTX = await simpleToken.approve(patron.address, approve)
+
+    const totalCost = await patron.calculateUnmintTokenPerToken(web3.fromWei(approve).toString())
+
+    console.log('totalUnmintedCost:', web3.fromWei(totalCost.toString(10)))
+    const preBalanceBondedToken = await patron.balanceOf(accounts[0])
+    console.log('preBalanceBondedToken:', web3.fromWei(preBalanceBondedToken).toString())
+
+    const gasEstimate = await patron.unmint.estimateGas(accounts[0], web3.fromWei(approve).toString() )
+    console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
+
+    const mintTX = await patron.unmint(accounts[0], web3.fromWei(approve).toString(10))
+    const balance = await patron.balanceOf(accounts[0])
+    const postBalance = await simpleToken.balanceOf(accounts[0])
+
+    const totalSupply = await patron.totalSupply()
+    const costPerToken = await patron.costPerToken()
+    console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
+    console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
+
+    // total cost estimate is same as differece between base token balance
+    assert.equal(totalCost.toString(10), postBalance.minus(preBalance).toString(10));
+
+    // total minted estimate is same as balance after minting
+    assert.equal(web3.fromWei((preBalanceBondedToken).minus(approve).toString(10)).toString(10), web3.fromWei(balance.toString(10)).toString(10));
+  }
+
 
   
 });

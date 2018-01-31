@@ -8,6 +8,7 @@ pragma solidity ^0.4.17;
  import 'oraclize/contracts/usingOraclize.sol';
 
  contract Patron is StandardToken, usingOraclize, Ownable {
+  using SafeMath for int256;
 
   string public name ;
   string public symbol;
@@ -122,40 +123,32 @@ pragma solidity ^0.4.17;
   }
 
   function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 , uint256 ) {
-    int slope = int(graphMultiplyer);
-    int graphMultiplyerDivisor_ = int(graphMultiplyerDivisor);
-    int dai0 = int( baseToken.balanceOf(address(this)) );
-    int dai1 = int(amount);
-    int existingTokens = int(totalSupply);
-    int totalTokens = uint( 
-      slope.mul(-1).add( 
-        sqrt( 
-          slope.mul(slope) + (dai0).add(dai1).mul(8).div(
-            graphMultiplyerDivisor_.mul(graphMultiplyerDivisor_)
-          ) 
-        ).mul(graphMultiplyerDivisor_) 
-      ).div(graphMultiplyerDivisor_) 
-    ).div(2);
-    uint newTokens = totalTokens.sub(existingTokens);
-    return (amount, newTokens);
+
+    uint dai0 = baseToken.balanceOf(address(this)).div(10**18);
+    uint dai1 = amount;
+
+    uint totalTokens = ( sqrt( dai0.add(dai1).mul(8).add(1) ).sub(1) ).div(2);
+    uint newTokens = totalTokens.mul(10**18).sub(totalSupply);
+
+    return (newTokens, amount.mul(10**18));
   }
 
   // sell
   function unmint (address patron, uint256 amount) public returns(uint256 totalCost){
     if (msg.sender != patron && msg.sender != oraclize_cbAddress() && patron != owner) revert();
     if (amount == 0) revert();
-    if (amount > balances[patron]) revert();
+    if (amount.mul(10**18) > balances[patron]) revert();
 
     totalCost = calculateUnmintTokenPerToken(amount);
 
-    totalEverMinted = totalEverMinted.sub(amount);
-    totalSupply = totalSupply.sub(amount);
-    balances[patron] = balances[patron].sub(amount);
+    totalSupply = totalSupply.sub(amount.mul(10**18));
+    balances[patron] = balances[patron].sub(amount.mul(10**18));
+
     poolBalance = poolBalance.sub(totalCost);
     
     updateCostOfToken();
-    if (!baseToken.transferFrom(address(this), patron, totalCost)) revert();
-    LogUnmint(amount, totalCost);
+    if (!baseToken.transfer(patron, totalCost)) revert();
+    LogUnmint(amount.mul(10**18), totalCost);
     return totalCost;
   }
 
@@ -172,12 +165,24 @@ pragma solidity ^0.4.17;
   //   return (totalUnminted, totalCost);
   // }
 
-  function calculateUnmintTokenPerToken (uint256 totalUnminted) public constant returns (uint256 totalCost) {
-    uint256 beginCostPerToken = costPerToken;
-    uint256 endCostPerToken = costPerToken.add(totalUnminted);
-    uint256 averageCostPerToken = beginCostPerToken.add(endCostPerToken).div(2);
-    totalCost = averageCostPerToken.mul(totalUnminted);
-    return totalCost;
+  // function calculateUnmintTokenPerToken (uint256 totalUnminted) public constant returns (uint256 totalCost) {
+  //   uint256 beginCostPerToken = costPerToken;
+  //   uint256 endCostPerToken = costPerToken.add(totalUnminted);
+  //   uint256 averageCostPerToken = beginCostPerToken.add(endCostPerToken).div(2);
+  //   totalCost = averageCostPerToken.mul(totalUnminted);
+  //   return totalCost;
+  // }
+  function calculateUnmintTokenPerToken (uint256 tokensToUnmint) public constant returns (uint256) {
+
+    uint dai1 = baseToken.balanceOf(address(this));
+
+    uint tokensAfterLeaving = (totalSupply - tokensToUnmint.mul(10**18)).div(10**18);
+
+    uint dai0 = ( tokensAfterLeaving.mul( tokensAfterLeaving.add(1) ) ).div(2);
+
+    uint daiDifference = dai1.sub(dai0.mul(10**18));
+
+    return daiDifference;
   }
 
 
