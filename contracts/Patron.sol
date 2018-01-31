@@ -5,9 +5,11 @@ pragma solidity ^0.4.17;
 
  import 'zeppelin/contracts/token/StandardToken.sol';
  import 'zeppelin/contracts/ownership/Ownable.sol';
+ import 'zeppelin/contracts/math/SafeMath.sol';
  import 'oraclize/contracts/usingOraclize.sol';
 
  contract Patron is StandardToken, usingOraclize, Ownable {
+  using SafeMath for int256;
 
   string public name ;
   string public symbol;
@@ -76,6 +78,9 @@ pragma solidity ^0.4.17;
       graphType = GraphType.GraphLinear;
     }
 
+    balances[owner] = 1;
+    totalSupply = 1;
+
     graphMultiplyer =_graphMultiplyer;
     updateCostOfToken();
     OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
@@ -103,7 +108,9 @@ pragma solidity ^0.4.17;
     uint256 totalCost;
 
     (totalMinted, totalCost) = calculateMintTokenPerToken(amount);
-    if (totalCost == 0) revert();
+    if (totalCost == 0) {
+      return (totalMinted, totalCost);
+    }
 
     totalEverMinted = totalEverMinted.add(totalMinted);
     totalSupply = totalSupply.add(totalMinted);
@@ -118,21 +125,67 @@ pragma solidity ^0.4.17;
     return (totalMinted, totalCost);
   }
 
+  // function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 totalMinted, uint256 totalCost) {
+  //   // uint256 totalMinted = 0;
+  //   // uint256 totalCost = 0;
+  //   //for loop to determine cost at each point.
+  //   uint256 tmpCostPerToken = costPerToken.mul(baseDivisionHelper);
+  //   for(uint i = 0; totalCost < amount; i = i.add(1)) {
+  //     if(totalCost.add(tmpCostPerToken) <= amount) {
+  //       totalCost = totalCost.add(tmpCostPerToken);
+  //       totalMinted = totalMinted.add(baseDivisionHelper.mul(1));
+  //       tmpCostPerToken = currentCostOfToken(totalSupply.add(i.mul(baseDivisionHelper)));
+  //     } else {
+  //       break;
+  //     }
+  //   }
+  //   return (totalMinted, totalCost);
+  // }
   function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 totalMinted, uint256 totalCost) {
-    // uint256 totalMinted = 0;
-    // uint256 totalCost = 0;
-    //for loop to determine cost at each point.
-    uint256 tmpCostPerToken = costPerToken.mul(baseDivisionHelper);
-    for(uint i = 0; totalCost < amount; i = i.add(1)) {
-      if(totalCost.add(tmpCostPerToken) <= amount) {
-        totalCost = totalCost.add(tmpCostPerToken);
-        totalMinted = totalMinted.add(baseDivisionHelper.mul(1));
-        tmpCostPerToken = currentCostOfToken(totalSupply.add(i.mul(baseDivisionHelper)));
-      } else {
-        break;
-      }
+
+    // x = current supply, y = supply after purchase
+    // amountToBuy = y - x
+    // amountToSpend (a / amount) = amountToBuy * averageCost
+    // averageCost = ( f(x) + f(y) ) / 2
+    // m = graphMultiplyer.div(graphDivisor)
+    // b = baseCost
+    // f(x) = mx + b (cost at current supply)
+    // f(y) = my + b (cost at supply after purchase)
+    // solve for y
+    // y = (-b + sqrt(b*b + m*m*x*x + 2mbx + 2ma) ) / m
+    // OR
+    // y = (-b - sqrt(b*b + m*m*x*x + 2mbx + 2ma) ) / m
+    // WHERE m !== 0
+    //
+    // if b = 0 then:
+    // y = sqrt( -m ( -2a - mx*x) ) / m
+    // OR
+    // y = -1 * ( sqrt( -m ( -2a - mx*x) ) / m )
+    // WHERE m !== 0
+    // 
+    int neg = -1;
+    int amount_ = int(amount);
+    int isNeg = neg.mul(2).mul(amount_).sub( int( graphMultiplyer.mul( totalSupply.mul(totalSupply) ).div(graphMultiplyerDivisor) ) );
+    if (isNeg < 0) {
+      isNeg = isNeg.mul(neg);
     }
+    uint256 y = sqrt( uint( isNeg ) ).div(graphMultiplyer).div(graphMultiplyerDivisor);
+
+    totalMinted = y.sub(totalSupply);
+
+    uint256 endCostPerToken = graphMultiplyer.mul( y ).div(graphMultiplyerDivisor);
+    uint256 averageCostPerToken = ( costPerToken.add(endCostPerToken) ).div(2);
+
+    totalCost = totalMinted.mul(averageCostPerToken);
     return (totalMinted, totalCost);
+  }
+  function sqrt(uint x) returns (uint y) {
+    uint z = (x + 1) / 2;
+    y = x;
+    while (z < y) {
+        y = z;
+        z = (x / z + z) / 2;
+    }
   }
 
   // sell
