@@ -42,7 +42,7 @@ pragma solidity ^0.4.17;
   }
   mapping (bytes32 => address) oraclizeIds;
 
-  uint256 public baseDivisionHelper;
+  uint256 public decimalPower;
   uint256 public baseCost = 0; // 1 ETH / baseToken
   uint256 public costPerToken = 0; // 1 baseToken / token
   uint256 public totalEverMinted;
@@ -68,7 +68,7 @@ pragma solidity ^0.4.17;
     symbol = _symbol;
 
     baseToken = StandardToken(_baseToken);
-    baseDivisionHelper = 10**baseTokenDecimals;
+    decimalPower = 10**baseTokenDecimals;
 
     if (_graphType == 2) {
       graphType = GraphType.GraphLogarithmic;
@@ -129,12 +129,12 @@ pragma solidity ^0.4.17;
   //   // uint256 totalMinted = 0;
   //   // uint256 totalCost = 0;
   //   //for loop to determine cost at each point.
-  //   uint256 tmpCostPerToken = costPerToken.mul(baseDivisionHelper);
+  //   uint256 tmpCostPerToken = costPerToken.mul(decimalPower);
   //   for(uint i = 0; totalCost < amount; i = i.add(1)) {
   //     if(totalCost.add(tmpCostPerToken) <= amount) {
   //       totalCost = totalCost.add(tmpCostPerToken);
-  //       totalMinted = totalMinted.add(baseDivisionHelper.mul(1));
-  //       tmpCostPerToken = currentCostOfToken(totalSupply.add(i.mul(baseDivisionHelper)));
+  //       totalMinted = totalMinted.add(decimalPower.mul(1));
+  //       tmpCostPerToken = currentCostOfToken(totalSupply.add(i.mul(decimalPower)));
   //     } else {
   //       break;
   //     }
@@ -143,6 +143,18 @@ pragma solidity ^0.4.17;
   // }
   function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 totalMinted, uint256 totalCost) {
 
+    uint256 y = getY(amount);
+    totalMinted = y.sub(totalSupply);
+
+    // uint256 beginCostPerToken = graphMultiplyer.mul( totalSupply ).div(graphMultiplyerDivisor);
+    uint256 endCostPerToken = currentCostOfToken(y);
+    uint256 averageCostPerToken = ( costPerToken.add(endCostPerToken) ).div(2);
+
+    totalCost = averageCostPerToken.mul(totalMinted);
+    return (totalMinted, totalCost);
+  }
+
+  function getY(uint256 amount) public constant returns (uint y) {
     // x = current supply, y = supply after purchase
     // amountToBuy = y - x
     // amountToSpend (a / amount) = amountToBuy * averageCost
@@ -164,20 +176,13 @@ pragma solidity ^0.4.17;
     // WHERE m !== 0
     // 
     int neg = -1;
-    int amount_ = int(amount);
-    int isNeg = neg.mul(2).mul(amount_).sub( int( graphMultiplyer.mul( totalSupply.mul(totalSupply) ).div(graphMultiplyerDivisor) ) );
-    if (isNeg < 0) {
-      isNeg = isNeg.mul(neg);
-    }
-    uint256 y = sqrt( uint( isNeg ) ).div(graphMultiplyer).div(graphMultiplyerDivisor);
-
-    totalMinted = y.sub(totalSupply);
-
-    uint256 endCostPerToken = graphMultiplyer.mul( y ).div(graphMultiplyerDivisor);
-    uint256 averageCostPerToken = ( costPerToken.add(endCostPerToken) ).div(2);
-
-    totalCost = totalMinted.mul(averageCostPerToken);
-    return (totalMinted, totalCost);
+    int foo = (neg).mul(2).mul(int(amount));
+    int goo = int( graphMultiplyer.mul( totalSupply.mul(totalSupply) ).div( graphMultiplyerDivisor) );
+    int toSquare = int(graphMultiplyer).mul(neg).mul(foo.sub(goo));
+    if (toSquare < 0) {
+      toSquare = toSquare.mul(neg);
+    }    
+    return sqrt( uint(toSquare).div(graphMultiplyerDivisor) );
   }
   function sqrt(uint x) returns (uint y) {
     uint z = (x + 1) / 2;
@@ -213,19 +218,18 @@ pragma solidity ^0.4.17;
   //   // uint256 totalUnminted = 0;
   //   // uint256 totalCost = 0;
   //   //for loop to determine cost at each point.
-  //   uint256 tmpCostPerToken = costPerToken.mul(baseDivisionHelper);
+  //   uint256 tmpCostPerToken = costPerToken.mul(decimalPower);
   //   for(uint i = 0; totalUnminted <= amount; i = i.add(1)) {
   //     totalCost = totalCost.add(tmpCostPerToken);
-  //     totalUnminted = totalUnminted.add(baseDivisionHelper.mul(1));
-  //     tmpCostPerToken = currentCostOfToken(totalSupply.sub(i.mul(baseDivisionHelper)));
+  //     totalUnminted = totalUnminted.add(decimalPower.mul(1));
+  //     tmpCostPerToken = currentCostOfToken(totalSupply.sub(i.mul(decimalPower)));
   //   }
   //   return (totalUnminted, totalCost);
   // }
 
   function calculateUnmintTokenPerToken (uint256 totalUnminted) public constant returns (uint256 totalCost) {
-    uint256 beginCostPerToken = costPerToken;
-    uint256 endCostPerToken = costPerToken.add(totalUnminted);
-    uint256 averageCostPerToken = beginCostPerToken.add(endCostPerToken).div(2);
+    uint256 endCostPerToken = currentCostOfToken( totalSupply.sub(totalUnminted) );
+    uint256 averageCostPerToken = costPerToken.add(endCostPerToken).div(2);
     totalCost = averageCostPerToken.mul(totalUnminted);
     return totalCost;
   }
@@ -237,7 +241,6 @@ pragma solidity ^0.4.17;
   }
 
   function currentCostOfToken(uint256 _supply) public constant returns (uint _cost) {
-  // function currentCostOfToken(uint256 _supply) internal constant returns (uint _cost) {
     uint cost = 0;
 
     if ( graphType == GraphType.GraphLinear ) {

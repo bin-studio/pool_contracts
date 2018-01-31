@@ -11,52 +11,57 @@ contract('Patron', function(accounts) {
     simpleToken = await SimpleToken.new();
   });
 
-  describe("Deploying token", function() {
-    it("should result in owning 10000 tokens", async function () {
-      const shouldEqual = 10000
-      const balanceOf = await simpleToken.balanceOf(accounts[0])
-      assert.equal(balanceOf.toString(10), web3.toWei(web3.toBigNumber(shouldEqual)).toString(10));
-    });
-    it("and approving should result approved tokens", async function () {
-      const approve = web3.toBigNumber(10000)
-      patron = await Patron.new('Test Project', 'ASDF', simpleToken.address, 18, 0, 10, {value: starter});
-      const approveTX = await simpleToken.approve(patron.address, approve.toString(10))
-      const allowance = await simpleToken.allowance(accounts[0], patron.address);
-      assert.equal(allowance.toString(10), approve.toString(10));
-    });
-  })
+  // describe("Deploying token", function() {
+  //   it("should result in owning 10000 tokens", async function () {
+  //     const shouldEqual = 10000
+  //     const balanceOf = await simpleToken.balanceOf(accounts[0])
+  //     assert.equal(balanceOf.toString(10), web3.toWei(web3.toBigNumber(shouldEqual)).toString(10));
+  //   });
+  //   it("and approving should result approved tokens", async function () {
+  //     const approve = web3.toBigNumber(10000)
+  //     patron = await Patron.new('Test Project', 'ASDF', simpleToken.address, 18, 0, 10, {value: starter});
+  //     const approveTX = await simpleToken.approve(patron.address, approve.toString(10))
+  //     const allowance = await simpleToken.allowance(accounts[0], patron.address);
+  //     assert.equal(allowance.toString(10), approve.toString(10));
+  //   });
+  // })
 
-  describe("Constant function", function () {
-    it("exponential calculation should work", async function () {
-      const decimals = 18
-      const graphType = 1 // Exponential
-      const multiplyer = 1000 // fraction out of 10,000
-      const denominator = 10000 // fraction out of 10,000
-      const base = 0 // 10**14 // fraction out of 10,000
-      const minting = web3.toWei( web3.toBigNumber(10) ) // if there are 10.0 tokens * 10**18
-      patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
-      const expoResult = await patron.currentCostOfToken( minting );
-      // mx^2 + b
-      const jsResult = web3.toBigNumber(multiplyer).div(denominator).mul( minting.pow(2) ).add(base)
-      assert.equal(expoResult.toString(10), jsResult.toString(10));
+  // describe("Constant function", function () {
+  //   it("exponential calculation should work", async function () {
+  //     const decimals = 18
+  //     const graphType = 1 // Exponential
+  //     const multiplyer = 1000 // fraction out of 10,000
+  //     const denominator = 10000 // fraction out of 10,000
+  //     const base = 0 // 10**14 // fraction out of 10,000
+  //     const minting = web3.toWei( web3.toBigNumber(10) ) // if there are 10.0 tokens * 10**18
+  //     patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
+  //     const expoResult = await patron.currentCostOfToken( minting );
+  //     // mx^2 + b
+  //     const jsResult = web3.toBigNumber(multiplyer).div(denominator).mul( minting.pow(2) ).add(base)
+  //     assert.equal(expoResult.toString(10), jsResult.toString(10));
 
-      const minting2 = web3.toWei( web3.toBigNumber(60) ) // if there are 60.0 tokens * 10**18
-      const expoResult2 = await patron.currentCostOfToken( minting2 );
-      // mx^2 + b
-      const jsResult2 = web3.toBigNumber(multiplyer).div(denominator).mul( minting2.pow(2) ).add(base)
-      assert.equal(expoResult2.toString(10), jsResult2.toString(10));
+  //     const minting2 = web3.toWei( web3.toBigNumber(60) ) // if there are 60.0 tokens * 10**18
+  //     const expoResult2 = await patron.currentCostOfToken( minting2 );
+  //     // mx^2 + b
+  //     const jsResult2 = web3.toBigNumber(multiplyer).div(denominator).mul( minting2.pow(2) ).add(base)
+  //     assert.equal(expoResult2.toString(10), jsResult2.toString(10));
 
-    })
-  })
+  //   })
+  // })
 
 
   describe("Minting new tokens", function () {
     it("with linear should work", async function () {
       const decimals = 18
       const graphType = 0 // Linear
-      const multiplyer = 10000 // fraction out of 10000
+      const multiplyer = 1000 // fraction out of 10000
       patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
-      await shouldWork()
+
+      // const y = await patron.getY(web3.toBigNumber(55).toString())
+      // console.log('y:', y.toString())
+      // await shouldWork(web3.toBigNumber('55'))
+      await shouldWork(web3.toBigNumber(web3.toWei('55')))
+      // await shouldWork(web3.toBigNumber(55))
     })
 
     // it("with exponential doesn't work", async function () {
@@ -121,21 +126,26 @@ contract('Patron', function(accounts) {
   //   });
   // });
 
-  async function shouldWork() {
+  async function shouldWork(approve) {
     const preBalance = await simpleToken.balanceOf(accounts[0])
 
-    const approve = web3.toBigNumber(web3.toWei('1'))
     const approveTX = await simpleToken.approve(patron.address, approve)
 
     const tuple = await patron.calculateMintTokenPerToken(approve)
     const totalMinted = tuple[0]
     const totalCost = tuple[1]
 
+
     console.log('totalMinted:', web3.fromWei(totalMinted.toString(10)))
     console.log('totalCost:', web3.fromWei(totalCost.toString(10)))
+
+
+    console.log('totalMinted:', (totalMinted.toString(10)))
+    console.log('totalCost:', (totalCost.toString(10)))
+
   
-    const gasEstimate = await patron.mint.estimateGas(accounts[0], approve)
-    console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
+    // const gasEstimate = await patron.mint.estimateGas(accounts[0], approve)
+    // console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
 
     // const mintTX = await patron.mint(accounts[0], approve.toString(10))
     // const balance = await patron.balanceOf(accounts[0])
