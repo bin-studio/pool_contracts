@@ -78,8 +78,8 @@ pragma solidity ^0.4.17;
       graphType = GraphType.GraphLinear;
     }
 
-    balances[owner] = 1;
-    totalSupply = 1;
+    balances[owner] = 0;
+    totalSupply = 0;
 
     graphMultiplyer =_graphMultiplyer;
     updateCostOfToken();
@@ -143,14 +143,17 @@ pragma solidity ^0.4.17;
   // }
   function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 totalMinted, uint256 totalCost) {
 
-    uint256 y = getY(amount);
-    totalMinted = y.sub(totalSupply);
+    totalMinted = amount.div(costPerToken.div(decimalPower));
+    totalCost = totalMinted.mul(costPerToken.div(decimalPower));
 
-    // uint256 beginCostPerToken = graphMultiplyer.mul( totalSupply ).div(graphMultiplyerDivisor);
-    uint256 endCostPerToken = currentCostOfToken(y);
-    uint256 averageCostPerToken = ( costPerToken.add(endCostPerToken) ).div(2);
+    // uint256 y = getY(amount);
+    // totalMinted = y.sub(totalSupply);
 
-    totalCost = averageCostPerToken.mul(totalMinted);
+    // // uint256 beginCostPerToken = graphMultiplyer.mul( totalSupply ).div(graphMultiplyerDivisor);
+    // uint256 endCostPerToken = currentCostOfToken(y);
+    // uint256 averageCostPerToken = ( costPerToken.add(endCostPerToken) ).div(2);
+
+    // totalCost = averageCostPerToken.mul(totalMinted);
     return (totalMinted, totalCost);
   }
 
@@ -258,7 +261,7 @@ pragma solidity ^0.4.17;
       }
       cost = ( graphMultiplyer.mul( fastlog2(_supply) ).div(graphMultiplyerDivisor) ).add(baseCost);
     }
-    return cost;
+    return cost == 0 ? decimalPower : cost;
   }
 
   // SPECTIAL CURVES

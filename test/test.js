@@ -54,13 +54,17 @@ contract('Patron', function(accounts) {
     it("with linear should work", async function () {
       const decimals = 18
       const graphType = 0 // Linear
-      const multiplyer = 1000 // fraction out of 10000
+      const multiplyer = 10000 // fraction out of 10000
       patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
 
-      // const y = await patron.getY(web3.toBigNumber(55).toString())
-      // console.log('y:', y.toString())
+      // let costPerToken = await patron.costPerToken()
+      // console.log('costPerToken:', costPerToken.toString())
       // await shouldWork(web3.toBigNumber('55'))
       await shouldWork(web3.toBigNumber(web3.toWei('55')))
+
+
+      await shouldWork(web3.toBigNumber(web3.toWei('100')))
+
       // await shouldWork(web3.toBigNumber(55))
     })
 
@@ -135,32 +139,34 @@ contract('Patron', function(accounts) {
     const totalMinted = tuple[0]
     const totalCost = tuple[1]
 
-
+    console.log('-------------')
     console.log('totalMinted:', web3.fromWei(totalMinted.toString(10)))
     console.log('totalCost:', web3.fromWei(totalCost.toString(10)))
 
 
-    console.log('totalMinted:', (totalMinted.toString(10)))
-    console.log('totalCost:', (totalCost.toString(10)))
+    // console.log('totalMinted:', (totalMinted.toString(10)))
+    // console.log('totalCost:', (totalCost.toString(10)))
+    const preBalanceBond = await patron.balanceOf(accounts[0])
 
   
-    // const gasEstimate = await patron.mint.estimateGas(accounts[0], approve)
-    // console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
+    const gasEstimate = await patron.mint.estimateGas(accounts[0], approve)
+    console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
 
-    // const mintTX = await patron.mint(accounts[0], approve.toString(10))
-    // const balance = await patron.balanceOf(accounts[0])
-    // const postBalance = await simpleToken.balanceOf(accounts[0])
+    const mintTX = await patron.mint(accounts[0], approve.toString(10))
+    const balance = await patron.balanceOf(accounts[0])
+    const postBalance = await simpleToken.balanceOf(accounts[0])
 
-    // const totalSupply = await patron.totalSupply()
-    // const costPerToken = await patron.costPerToken()
-    // console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
-    // console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
+    const totalSupply = await patron.totalSupply()
+    const costPerToken = await patron.costPerToken()
 
-    // // total cost estimate is same as differece between base token balance
-    // assert.equal(totalCost.toString(10), preBalance.minus(postBalance).toString(10));
+    console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
+    console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
 
-    // // total minted estimate is same as balance after minting
-    // assert.equal(web3.fromWei(totalMinted.toString(10)).toString(10), web3.fromWei(balance.toString(10)).toString(10));
+    // total cost estimate is same as differece between base token balance
+    assert.equal(totalCost.toString(10), preBalance.minus(postBalance).toString(10));
+
+    // total minted estimate is same as balance after minting
+    assert.equal(web3.fromWei(totalMinted.add(preBalanceBond).toString(10)).toString(10), web3.fromWei(balance.toString(10)).toString(10));
   }
 
   
