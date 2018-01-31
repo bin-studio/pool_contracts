@@ -15,6 +15,7 @@ pragma solidity ^0.4.17;
   uint256 public constant INITIAL_SUPPLY = 10;
 
   StandardToken public baseToken;
+  uint256 baseTokenDecimals;
 
   uint256 public oraclizeGasLimit = 200000;
   uint256 public oraclizeGasPrice = 4000000000;
@@ -40,8 +41,9 @@ pragma solidity ^0.4.17;
   }
   mapping (bytes32 => address) oraclizeIds;
 
+  uint256 public increaser;
   uint256 public baseDivisionHelper;
-  uint256 public baseCost = 0; // 1 ETH / baseToken
+  uint256 public baseCost; // 1 ETH / baseToken
   uint256 public costPerToken = 0; // 1 baseToken / token
   uint256 public totalEverMinted;
   uint256 public totalEverWithdrawn;
@@ -61,12 +63,14 @@ pragma solidity ^0.4.17;
   event LogMint(uint256 totalMinted, uint256 totalCost);
   event LogUnmint(uint256 totalMinted, uint256 totalCost);
 
-  function Patron (string _name, string _symbol, address _baseToken, uint256 baseTokenDecimals, uint256 _graphType, uint256 _graphMultiplyer) payable {
+  function Patron (string _name, string _symbol, address _baseToken, uint256 _baseTokenDecimals, uint256 _graphType, uint256 _graphMultiplyer) payable {
     name = _name;
     symbol = _symbol;
 
     baseToken = StandardToken(_baseToken);
-    baseDivisionHelper = 10**baseTokenDecimals;
+    baseTokenDecimals = _baseTokenDecimals;
+    baseCost = 0; //10 ** baseTokenDecimals;
+    increaser = 10 ** ( baseTokenDecimals );
 
     if (_graphType == 2) {
       graphType = GraphType.GraphLogarithmic;
@@ -95,15 +99,14 @@ pragma solidity ^0.4.17;
   }
 
 
-  function mint(address patron, uint256 amount) public returns (uint256, uint256) {
+  function mint(address patron, uint256 amount) public returns (uint256 totalMinted, uint256 totalCost) {
     if (msg.sender != patron && msg.sender != oraclize_cbAddress() && patron != owner) revert();
     if (amount == 0) revert();
 
-    uint256 totalMinted;
-    uint256 totalCost;
-
     (totalMinted, totalCost) = calculateMintTokenPerToken(amount);
-    if (totalCost == 0) revert();
+    if (totalCost == 0) {
+      return (totalMinted, totalCost);
+    }
 
     totalEverMinted = totalEverMinted.add(totalMinted);
     totalSupply = totalSupply.add(totalMinted);
@@ -118,16 +121,16 @@ pragma solidity ^0.4.17;
     return (totalMinted, totalCost);
   }
 
-  function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 totalMinted, uint256 totalCost) {
-    // uint256 totalMinted = 0;
-    // uint256 totalCost = 0;
-    //for loop to determine cost at each point.
-    uint256 tmpCostPerToken = costPerToken.mul(baseDivisionHelper);
+  function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 , uint256 ) {
+    uint256 totalMinted = 0;
+    uint256 totalCost = 0;
+    // for loop to determine cost at each point.
+    uint256 tmpCostPerToken = costPerToken.mul(increaser);
     for(uint i = 0; totalCost < amount; i = i.add(1)) {
       if(totalCost.add(tmpCostPerToken) <= amount) {
         totalCost = totalCost.add(tmpCostPerToken);
-        totalMinted = totalMinted.add(baseDivisionHelper.mul(1));
-        tmpCostPerToken = currentCostOfToken(totalSupply.add(i.mul(baseDivisionHelper)));
+        totalMinted = totalMinted.add(increaser);
+        tmpCostPerToken = currentCostOfToken(totalSupply.add(totalMinted)).mul(increaser);
       } else {
         break;
       }
@@ -141,9 +144,7 @@ pragma solidity ^0.4.17;
     if (amount == 0) revert();
     if (amount > balances[patron]) revert();
 
-
     totalCost = calculateUnmintTokenPerToken(amount);
-
 
     totalEverMinted = totalEverMinted.sub(amount);
     totalSupply = totalSupply.sub(amount);
