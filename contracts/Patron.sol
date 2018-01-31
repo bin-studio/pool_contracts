@@ -83,7 +83,7 @@ pragma solidity ^0.4.17;
 
     graphMultiplyer =_graphMultiplyer;
     updateCostOfToken();
-    OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+    // OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
   }
 
 
