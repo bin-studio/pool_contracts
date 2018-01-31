@@ -122,20 +122,22 @@ pragma solidity ^0.4.17;
   }
 
   function calculateMintTokenPerToken (uint256 amount) public constant returns (uint256 , uint256 ) {
-    uint256 totalMinted = 0;
-    uint256 totalCost = 0;
-    // for loop to determine cost at each point.
-    uint256 tmpCostPerToken = costPerToken.mul(increaser);
-    for(uint i = 0; totalCost < amount; i = i.add(1)) {
-      if(totalCost.add(tmpCostPerToken) <= amount) {
-        totalCost = totalCost.add(tmpCostPerToken);
-        totalMinted = totalMinted.add(increaser);
-        tmpCostPerToken = currentCostOfToken(totalSupply.add(totalMinted)).mul(increaser);
-      } else {
-        break;
-      }
-    }
-    return (totalMinted, totalCost);
+    int slope = int(graphMultiplyer);
+    int graphMultiplyerDivisor_ = int(graphMultiplyerDivisor);
+    int dai0 = int( baseToken.balanceOf(address(this)) );
+    int dai1 = int(amount);
+    int existingTokens = int(totalSupply);
+    int totalTokens = uint( 
+      slope.mul(-1).add( 
+        sqrt( 
+          slope.mul(slope) + (dai0).add(dai1).mul(8).div(
+            graphMultiplyerDivisor_.mul(graphMultiplyerDivisor_)
+          ) 
+        ).mul(graphMultiplyerDivisor_) 
+      ).div(graphMultiplyerDivisor_) 
+    ).div(2);
+    uint newTokens = totalTokens.sub(existingTokens);
+    return (amount, newTokens);
   }
 
   // sell
