@@ -81,18 +81,18 @@ contract('Patron', function(accounts) {
       //  console.log((amount).toString(), (newTokens).toString())
       await shouldWork((web3.toBigNumber(55)).toString(10))
 
-      results = await patron.calculateMintTokenPerToken((web3.toBigNumber(55)).toString(10))
-      amount = results[0]
-      newTokens = results[1]
-      //  console.log((amount).toString(), (newTokens).toString())
-      await shouldWork((web3.toBigNumber(55)).toString(10))
-
-      results = await patron.calculateUnmintTokenPerToken((web3.toBigNumber(4)).toString(10))
-      // console.log(results)
+      // results = await patron.calculateMintTokenPerToken((web3.toBigNumber(55)).toString(10))
       // amount = results[0]
-      //  console.log(web3.fromWei(results).toString())
+      // newTokens = results[1]
+      // //  console.log((amount).toString(), (newTokens).toString())
+      // await shouldWork((web3.toBigNumber(55)).toString(10))
 
-      await unmint((web3.toBigNumber(4)).toString(10))
+      // results = await patron.calculateUnmintTokenPerToken((web3.toBigNumber(4)).toString(10))
+      // // console.log(results)
+      // // amount = results[0]
+      // //  console.log(web3.fromWei(results).toString())
+
+      // await unmint((web3.toBigNumber(4)).toString(10))
     })
 
     it("with exponential fails gracefully", async function () {
