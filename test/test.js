@@ -51,6 +51,23 @@ contract('Patron', function(accounts) {
 
 
   describe("Minting new tokens", function () {
+
+    // it ("has values", async function () {
+    //   const decimals = 0
+    //   const graphType = 0 // Linear
+    //   const multiplyer = 1000 // fraction out of 10000
+    //   patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
+
+    //   let info = await patron.decimals()
+    //   console.log(info)
+    //   info = await patron.graphType()
+    //   console.log(info)
+    //   info = await patron.multiplyer()
+    //   console.log(info)
+    //   info = await patron.decimals()
+    //   console.log(info)
+    // })
+
     it("with linear should work", async function () {
       const decimals = 0
       const graphType = 0 // Linear
