@@ -11,43 +11,43 @@ contract('Patron', function(accounts) {
     simpleToken = await SimpleToken.new();
   });
 
-  // describe("Deploying token", function() {
-  //   it("should result in owning 10000 tokens", async function () {
-  //     const shouldEqual = 10000
-  //     const balanceOf = await simpleToken.balanceOf(accounts[0])
-  //     assert.equal(balanceOf.toString(10), web3.toWei(web3.toBigNumber(shouldEqual)).toString(10));
-  //   });
-  //   it("and approving should result approved tokens", async function () {
-  //     const approve = web3.toBigNumber(10000)
-  //     patron = await Patron.new('Test Project', 'ASDF', simpleToken.address, 18, 0, 10, {value: starter});
-  //     const approveTX = await simpleToken.approve(patron.address, approve.toString(10))
-  //     const allowance = await simpleToken.allowance(accounts[0], patron.address);
-  //     assert.equal(allowance.toString(10), approve.toString(10));
-  //   });
-  // })
+  describe("Deploying token", function() {
+    it("should result in owning 10000 tokens", async function () {
+      const shouldEqual = 10000
+      const balanceOf = await simpleToken.balanceOf(accounts[0])
+      assert.equal(balanceOf.toString(10), web3.toWei(web3.toBigNumber(shouldEqual)).toString(10));
+    });
+    it("and approving should result approved tokens", async function () {
+      const approve = web3.toBigNumber(10000)
+      patron = await Patron.new('Test Project', 'ASDF', simpleToken.address, 18, 0, 10, {value: starter});
+      const approveTX = await simpleToken.approve(patron.address, approve.toString(10))
+      const allowance = await simpleToken.allowance(accounts[0], patron.address);
+      assert.equal(allowance.toString(10), approve.toString(10));
+    });
+  })
 
-  // describe("Constant function", function () {
-  //   it("exponential calculation should work", async function () {
-  //     const decimals = 18
-  //     const graphType = 1 // Exponential
-  //     const multiplyer = 1000 // fraction out of 10,000
-  //     const denominator = 10000 // fraction out of 10,000
-  //     const base = 0 // 10**14 // fraction out of 10,000
-  //     const minting = web3.toWei( web3.toBigNumber(10) ) // if there are 10.0 tokens * 10**18
-  //     patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
-  //     const expoResult = await patron.currentCostOfToken( minting );
-  //     // mx^2 + b
-  //     const jsResult = web3.toBigNumber(multiplyer).div(denominator).mul( minting.pow(2) ).add(base)
-  //     assert.equal(expoResult.toString(10), jsResult.toString(10));
+  describe("Constant function", function () {
+    it("exponential calculation should work", async function () {
+      const decimals = 18
+      const graphType = 1 // Exponential
+      const multiplyer = 1000 // fraction out of 10,000
+      const denominator = 10000 // fraction out of 10,000
+      const base = 0 // 10**14 // fraction out of 10,000
+      const minting = web3.toWei( web3.toBigNumber(10) ) // if there are 10.0 tokens * 10**18
+      patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
+      const expoResult = await patron.currentCostOfToken( minting );
+      // mx^2 + b
+      const jsResult = web3.toBigNumber(multiplyer).div(denominator).mul( minting.pow(2) ).add(base)
+      assert.equal(expoResult.toString(10), jsResult.toString(10));
 
-  //     const minting2 = web3.toWei( web3.toBigNumber(60) ) // if there are 60.0 tokens * 10**18
-  //     const expoResult2 = await patron.currentCostOfToken( minting2 );
-  //     // mx^2 + b
-  //     const jsResult2 = web3.toBigNumber(multiplyer).div(denominator).mul( minting2.pow(2) ).add(base)
-  //     assert.equal(expoResult2.toString(10), jsResult2.toString(10));
+      const minting2 = web3.toWei( web3.toBigNumber(60) ) // if there are 60.0 tokens * 10**18
+      const expoResult2 = await patron.currentCostOfToken( minting2 );
+      // mx^2 + b
+      const jsResult2 = web3.toBigNumber(multiplyer).div(denominator).mul( minting2.pow(2) ).add(base)
+      assert.equal(expoResult2.toString(10), jsResult2.toString(10));
 
-  //   })
-  // })
+    })
+  })
 
 
   describe("Minting new tokens", function () {
@@ -68,56 +68,56 @@ contract('Patron', function(accounts) {
     //   console.log(info)
     // })
 
-    it("with linear should work", async function () {
+    it("with linear should mint, mint, then unmint", async function () {
       const decimals = 0
       const graphType = 0 // Linear
       const multiplyer = 1000 // fraction out of 10000
       patron = await Patron.new('Linear Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
       
-      let results = await patron.calculateMintTokenPerToken((web3.toBigNumber(55)).toString(10))
+      let results = await patron.calculateMintTokenPerToken('55') // (web3.toBigNumber(55)).toString(10))
       // console.log(results)
       let amount = results[0]
       let newTokens = results[1]
-      console.log((amount).toString(), (newTokens).toString())
+      //  console.log((amount).toString(), (newTokens).toString())
       await shouldWork((web3.toBigNumber(55)).toString(10))
 
       results = await patron.calculateMintTokenPerToken((web3.toBigNumber(55)).toString(10))
       amount = results[0]
       newTokens = results[1]
-      console.log((amount).toString(), (newTokens).toString())
+      //  console.log((amount).toString(), (newTokens).toString())
       await shouldWork((web3.toBigNumber(55)).toString(10))
 
       results = await patron.calculateUnmintTokenPerToken((web3.toBigNumber(4)).toString(10))
       // console.log(results)
       // amount = results[0]
-      console.log(web3.fromWei(results).toString())
+      //  console.log(web3.fromWei(results).toString())
 
       await unmint((web3.toBigNumber(4)).toString(10))
     })
 
-    // it("with exponential doesn't work", async function () {
-    //   try {
-    //     const decimals = 18
-    //     const graphType = 1 // Exponential
-    //     const multiplyer = 10000 // fraction out of 10000
-    //     patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
-    //     await shouldWork()
-    //   } catch (error) {
-    //     assert.isOk('i expected this');
-    //   }
-    // })
+    it("with exponential fails gracefully", async function () {
+      try {
+        const decimals = 18
+        const graphType = 1 // Exponential
+        const multiplyer = 10000 // fraction out of 10000
+        patron = await Patron.new('Exponential Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
+        await shouldWork()
+      } catch (error) {
+        assert.isOk('i expected this');
+      }
+    })
 
-    // it("with logarithmic doesn't work", async function () {
-    //   try {
-    //     const decimals = 18
-    //     const graphType = 2 // Logarithmic
-    //     const multiplyer = 10000 // fraction out of 10000
-    //     patron = await Patron.new('Logarithmic Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
-    //     await shouldWork()
-    //   } catch (error) {
-    //     assert.isOk('i expected this');
-    //   }
-    // })
+    it("with logarithmic fails gracefully", async function () {
+      try {
+        const decimals = 18
+        const graphType = 2 // Logarithmic
+        const multiplyer = 10000 // fraction out of 10000
+        patron = await Patron.new('Logarithmic Project', 'ASDF', simpleToken.address, decimals, graphType, multiplyer, {value: starter});
+        await shouldWork()
+      } catch (error) {
+        assert.isOk('i expected this');
+      }
+    })
   })
 
 
@@ -162,19 +162,19 @@ contract('Patron', function(accounts) {
 
     const approve = web3.toBigNumber(web3.toWei(amount))
     const simpleBalance = await simpleToken.balanceOf(accounts[0])
-    console.log('simpleBalanceBefore:', web3.fromWei(simpleBalance).toString())
+    //  console.log('simpleBalanceBefore:', web3.fromWei(simpleBalance).toString())
     const approveTX = await simpleToken.approve(patron.address, approve)
 
     const tuple = await patron.calculateMintTokenPerToken(web3.fromWei(approve).toString())
     const totalMinted = tuple[0]
     const totalCost = tuple[1]
 
-    console.log('totalMinted:', web3.fromWei(totalMinted.toString(10)))
-    console.log('totalCost:', web3.fromWei(totalCost.toString(10)))
+    //  console.log('totalMinted:', web3.fromWei(totalMinted.toString(10)))
+    //  console.log('totalCost:', web3.fromWei(totalCost.toString(10)))
     const preBalanceBondedToken = await patron.balanceOf(accounts[0])
 
     const gasEstimate = await patron.mint.estimateGas(accounts[0], web3.fromWei(approve).toString() )
-    console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
+    //  console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
 
     const mintTX = await patron.mint(accounts[0], web3.fromWei(approve).toString(10))
     const balance = await patron.balanceOf(accounts[0])
@@ -182,8 +182,8 @@ contract('Patron', function(accounts) {
 
     const totalSupply = await patron.totalSupply()
     const costPerToken = await patron.costPerToken()
-    console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
-    console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
+    //  console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
+    //  console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
 
     // total cost estimate is same as differece between base token balance
     assert.equal(totalCost.toString(10), preBalance.minus(postBalance).toString(10));
@@ -198,17 +198,17 @@ contract('Patron', function(accounts) {
 
     const approve = web3.toBigNumber(web3.toWei(amount))
     const simpleBalance = await simpleToken.balanceOf(accounts[0])
-    console.log('simpleBalanceBefore:', web3.fromWei(simpleBalance).toString())
+    //  console.log('simpleBalanceBefore:', web3.fromWei(simpleBalance).toString())
     const approveTX = await simpleToken.approve(patron.address, approve)
 
     const totalCost = await patron.calculateUnmintTokenPerToken(web3.fromWei(approve).toString())
 
-    console.log('totalUnmintedCost:', web3.fromWei(totalCost.toString(10)))
+    //  console.log('totalUnmintedCost:', web3.fromWei(totalCost.toString(10)))
     const preBalanceBondedToken = await patron.balanceOf(accounts[0])
-    console.log('preBalanceBondedToken:', web3.fromWei(preBalanceBondedToken).toString())
+    //  console.log('preBalanceBondedToken:', web3.fromWei(preBalanceBondedToken).toString())
 
     const gasEstimate = await patron.unmint.estimateGas(accounts[0], web3.fromWei(approve).toString() )
-    console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
+    //  console.log('gas in ETH', web3.fromWei(web3.toBigNumber(gasEstimate).mul(gasPrice)).toString(10))
 
     const mintTX = await patron.unmint(accounts[0], web3.fromWei(approve).toString(10))
     const balance = await patron.balanceOf(accounts[0])
@@ -216,8 +216,8 @@ contract('Patron', function(accounts) {
 
     const totalSupply = await patron.totalSupply()
     const costPerToken = await patron.costPerToken()
-    console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
-    console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
+    //  console.log('totalSupply', web3.fromWei(totalSupply).toString(10))
+    //  console.log('costPerToken', web3.fromWei(costPerToken).toString(10))
 
     // total cost estimate is same as differece between base token balance
     assert.equal(totalCost.toString(10), postBalance.minus(preBalance).toString(10));

@@ -3492,9 +3492,9 @@
       {
         "attributes": {
           "contractDependencies": [
-            8911,
+            9077,
             9117,
-            9077
+            8911
           ],
           "contractKind": "contract",
           "documentation": "@title Standard ERC20 token\n * @dev Implementation of the basic standard token.\n@dev https://github.com/ethereum/EIPs/issues/20\n@dev Based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol",
@@ -6693,10 +6693,10 @@
       {
         "attributes": {
           "contractDependencies": [
-            8911,
-            9117,
             9077,
-            9344
+            9117,
+            9344,
+            8911
           ],
           "contractKind": "contract",
           "documentation": "@title SimpleToken\n@dev Very simple ERC20 Token example, where all tokens are pre-assigned to the creator.\nNote they can later distribute these tokens as they wish using `transfer` and other\n`StandardToken` functions.",
@@ -7243,5 +7243,5 @@
   },
   "networks": {},
   "schemaVersion": "1.0.1",
-  "updatedAt": "2018-02-01T01:40:55.212Z"
+  "updatedAt": "2018-02-01T05:45:25.319Z"
 }
