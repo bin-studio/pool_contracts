@@ -86,6 +86,12 @@ pragma solidity ^0.4.17;
     // OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
   }
 
+  function getAllowance (address patron) public constant returns(uint256 allowance) {
+    return baseToken.allowance(patron, address(this));
+  }
+  function getAddress () public constant returns(address thisAddress) {
+    return address(this);
+  }
 
   function returnSubscriptionsLength() public constant returns(uint256 length) {
     return subscriptionKeys.length;
